@@ -11,10 +11,11 @@ import {
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useAgentChat } from '../hooks/useAgentChat';
+import LiveEventStream from '../components/LiveEventStream';
 
 const Results: React.FC = () => {
   const { searchParams, loading } = useSelector((state: RootState) => state.flight);
-  const { messages, isStreaming } = useSelector((state: RootState) => state.agent);
+  const { messages, isStreaming, liveEvents } = useSelector((state: RootState) => state.agent);
   const { sendMessage } = useAgentChat();
 
   useEffect(() => {
@@ -63,6 +64,9 @@ const Results: React.FC = () => {
           <Chip label={searchParams.tripType} />
         </Box>
       </Paper>
+
+      {/* Live Event Stream */}
+      <LiveEventStream events={liveEvents} isStreaming={isStreaming} />
 
       {/* Agent Conversation */}
       <Paper sx={{ p: 3 }}>

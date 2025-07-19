@@ -1,6 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { addMessage, updateLastMessage, setStreaming } from '../store/slices/agentSlice';
+import { 
+  addMessage, 
+  updateLastMessage, 
+  setStreaming, 
+  addLiveEvent, 
+  updateLiveEvent, 
+  clearLiveEvents 
+} from '../store/slices/agentSlice';
 
 interface UseAgentChatOptions {
   apiUrl?: string;
@@ -24,12 +31,25 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
     try {
       setIsConnected(true);
       dispatch(setStreaming(true));
+      dispatch(clearLiveEvents());
 
       // Add user message if provided
       if (message) {
         dispatch(addMessage({
           role: 'user',
           content: message,
+        }));
+        dispatch(addLiveEvent({
+          id: `user-input-${Date.now()}`,
+          type: 'USER_INPUT',
+          message: `📥 Received user input: "${message.slice(0, 50)}${message.length > 50 ? '...' : ''}"`,
+        }));
+      } else if (searchParams) {
+        dispatch(addLiveEvent({
+          id: `user-search-${Date.now()}`,
+          type: 'USER_SEARCH',
+          message: `🔍 Received flight search request: ${searchParams.origin} → ${searchParams.destination}`,
+          details: `${searchParams.departureDate}, ${searchParams.passengers.adults} passenger(s), ${searchParams.class} class`
         }));
       }
 
@@ -42,11 +62,15 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
         ...(searchParams && { searchParams }),
       };
 
-      // Create EventSource for Server-Sent Events
+      console.log('🔄 Sending request to:', `${apiUrl}${endpoint}`);
+      console.log('📦 Payload:', payload);
+
+      // Use fetch with streaming response
       const response = await fetch(`${apiUrl}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
         body: JSON.stringify(payload),
       });
@@ -54,6 +78,8 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      console.log('✅ Response received, starting to read stream...');
 
       // Read the response as text and parse SSE events
       const reader = response.body?.getReader();
@@ -64,23 +90,42 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
       }
 
       let assistantMessageStarted = false;
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
         
-        if (done) break;
+        if (done) {
+          console.log('📡 Stream ended');
+          break;
+        }
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        // Decode the chunk and add to buffer
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        
+        // Process complete lines
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const eventData = JSON.parse(line.slice(6));
+              console.log('📨 Received event:', eventData.type, eventData);
+              
+              // Add each real event as it happens
+              const eventId = `${eventData.type}-${Date.now()}`;
               
               switch (eventData.type) {
                 case 'RUN_STARTED':
                   console.log('🚀 Agent run started');
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'RUN_STARTED',
+                    message: `🚀 Agent run started (Thread: ${eventData.threadId})`,
+                    details: `Run ID: ${eventData.runId}`
+                  }));
                   break;
                   
                 case 'TEXT_MESSAGE_START':
@@ -90,29 +135,95 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
                     role: 'assistant',
                     content: '',
                   }));
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'TEXT_MESSAGE_START',
+                    message: `💬 Starting to compose response (Message ID: ${eventData.messageId})`,
+                    details: `Role: ${eventData.role}`
+                  }));
                   break;
                   
                 case 'TEXT_MESSAGE_CONTENT':
                   if (assistantMessageStarted) {
+                    console.log('📝 Adding text chunk:', eventData.delta);
                     dispatch(updateLastMessage(eventData.delta));
+                    // Show streaming content events (but limit frequency)
+                    if (Math.random() < 0.1) { // Only show 10% of content events to avoid spam
+                      dispatch(addLiveEvent({
+                        id: eventId,
+                        type: 'TEXT_MESSAGE_CONTENT',
+                        message: `📝 Streaming text: "${eventData.delta.slice(0, 30)}${eventData.delta.length > 30 ? '...' : ''}"`,
+                        details: `Message ID: ${eventData.messageId}`
+                      }));
+                    }
                   }
                   break;
                   
                 case 'TEXT_MESSAGE_END':
                   console.log('✅ Message completed');
                   assistantMessageStarted = false;
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'TEXT_MESSAGE_END',
+                    message: `✅ Response completed (Message ID: ${eventData.messageId})`,
+                  }));
+                  break;
+                  
+                case 'TOOL_CALL_START':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'TOOL_CALL_START',
+                    message: `🔧 Calling tool: ${eventData.toolCallName}`,
+                    details: `Tool Call ID: ${eventData.toolCallId}${eventData.parentMessageId ? `, Parent: ${eventData.parentMessageId}` : ''}`
+                  }));
+                  break;
+                  
+                case 'TOOL_CALL_ARGS':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'TOOL_CALL_ARGS',
+                    message: `📋 Tool arguments: ${eventData.delta}`,
+                    details: `Tool Call ID: ${eventData.toolCallId}`
+                  }));
+                  break;
+                  
+                case 'TOOL_CALL_END':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'TOOL_CALL_END',
+                    message: `✅ Tool execution completed`,
+                    details: `Tool Call ID: ${eventData.toolCallId}`
+                  }));
                   break;
                   
                 case 'CUSTOM':
                   if (eventData.name === 'FLIGHT_SEARCH_RESULT') {
                     console.log('✈️ Flight search results:', eventData.value);
-                    // You can dispatch this to a flight results slice if needed
+                    dispatch(addLiveEvent({
+                      id: eventId,
+                      type: 'CUSTOM',
+                      message: `✈️ Flight search completed: Found ${eventData.value?.totalResults || 0} flights`,
+                      details: eventData.value ? `Price range: $${Math.min(...(eventData.value.flights?.map((f: any) => f.price.amount) || [0]))} - $${Math.max(...(eventData.value.flights?.map((f: any) => f.price.amount) || [0]))}` : 'No details'
+                    }));
+                  } else {
+                    dispatch(addLiveEvent({
+                      id: eventId,
+                      type: 'CUSTOM',
+                      message: `🔔 Custom event: ${eventData.name}`,
+                      details: typeof eventData.value === 'string' ? eventData.value : JSON.stringify(eventData.value).slice(0, 100)
+                    }));
                   }
                   break;
                   
                 case 'RUN_FINISHED':
                   console.log('🏁 Agent run finished');
                   dispatch(setStreaming(false));
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'RUN_FINISHED',
+                    message: `🏁 Agent run completed successfully`,
+                    details: `Thread: ${eventData.threadId}, Run: ${eventData.runId}`
+                  }));
                   break;
                   
                 case 'RUN_ERROR':
@@ -122,10 +233,26 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
                     content: `Error: ${eventData.message}`,
                   }));
                   dispatch(setStreaming(false));
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'RUN_ERROR',
+                    message: `❌ Error: ${eventData.message}`,
+                    details: eventData.code ? `Error Code: ${eventData.code}` : 'No error code'
+                  }));
+                  break;
+                  
+                default:
+                  // Catch any other events we might not be handling
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: eventData.type,
+                    message: `📡 Event: ${eventData.type}`,
+                    details: JSON.stringify(eventData).slice(0, 100)
+                  }));
                   break;
               }
             } catch (parseError) {
-              console.warn('Failed to parse SSE event:', line);
+              console.warn('Failed to parse SSE event:', line, parseError);
             }
           }
         }
