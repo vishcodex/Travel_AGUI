@@ -147,15 +147,8 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
                   if (assistantMessageStarted) {
                     console.log('📝 Adding text chunk:', eventData.delta);
                     dispatch(updateLastMessage(eventData.delta));
-                    // Show streaming content events (but limit frequency)
-                    if (Math.random() < 0.1) { // Only show 10% of content events to avoid spam
-                      dispatch(addLiveEvent({
-                        id: eventId,
-                        type: 'TEXT_MESSAGE_CONTENT',
-                        message: `📝 Streaming text: "${eventData.delta.slice(0, 30)}${eventData.delta.length > 30 ? '...' : ''}"`,
-                        details: `Message ID: ${eventData.messageId}`
-                      }));
-                    }
+                    // Don't show individual character streaming events - too noisy
+                    // The user wants to see high-level events only
                   }
                   break;
                   
@@ -193,6 +186,96 @@ export const useAgentChat = (options: UseAgentChatOptions = {}) => {
                     type: 'TOOL_CALL_END',
                     message: `✅ Tool execution completed`,
                     details: `Tool Call ID: ${eventData.toolCallId}`
+                  }));
+                  break;
+
+                case 'THINKING_START':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'THINKING_START',
+                    message: `🤔 Agent is thinking...`,
+                    details: `Message ID: ${eventData.messageId}`
+                  }));
+                  break;
+
+                case 'THINKING_TEXT_MESSAGE_CONTENT':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'THINKING_TEXT_MESSAGE_CONTENT',
+                    message: `💭 Thinking: ${eventData.delta}`,
+                    details: `Message ID: ${eventData.messageId}`
+                  }));
+                  break;
+
+                case 'THINKING_END':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'THINKING_END',
+                    message: `✅ Thinking completed`,
+                    details: `Message ID: ${eventData.messageId}`
+                  }));
+                  break;
+
+                case 'STEP_STARTED':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'STEP_STARTED',
+                    message: `🚀 Step started: ${eventData.stepName}`,
+                    details: `Step ID: ${eventData.stepId}`
+                  }));
+                  break;
+
+                case 'STEP_FINISHED':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'STEP_FINISHED',
+                    message: `✅ Step completed: ${eventData.stepName || 'Unknown'}`,
+                    details: `Step ID: ${eventData.stepId}`
+                  }));
+                  break;
+
+                case 'TOOL_CALL_RESULT':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'TOOL_CALL_RESULT',
+                    message: `📊 Tool result received`,
+                    details: `Tool Call ID: ${eventData.toolCallId}`
+                  }));
+                  break;
+
+                case 'STATE_SNAPSHOT':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'STATE_SNAPSHOT',
+                    message: `📸 State snapshot captured`,
+                    details: `Current step: ${eventData.state?.currentStep || 'unknown'}`
+                  }));
+                  break;
+
+                case 'STATE_DELTA':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'STATE_DELTA',
+                    message: `🔄 State updated`,
+                    details: JSON.stringify(eventData.delta).slice(0, 100)
+                  }));
+                  break;
+
+                case 'MESSAGES_SNAPSHOT':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'MESSAGES_SNAPSHOT',
+                    message: `💬 Messages snapshot: ${eventData.messages?.length || 0} messages`,
+                    details: `Thread: ${eventData.threadId}`
+                  }));
+                  break;
+
+                case 'RAW':
+                  dispatch(addLiveEvent({
+                    id: eventId,
+                    type: 'RAW',
+                    message: `🔧 Raw event received`,
+                    details: JSON.stringify(eventData).slice(0, 100)
                   }));
                   break;
                   
