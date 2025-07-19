@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { flightRoutes } from './routes/flights.js';
 import { agentRoutes } from './routes/agents.js';
-import { testRoutes } from './routes/test.js';
+
 
 dotenv.config();
 
@@ -21,7 +21,7 @@ app.use(express.json());
 // Routes
 app.use('/api/flights', flightRoutes);
 app.use('/api/agents', agentRoutes);
-app.use('/api/test', testRoutes);
+
 
 // Health check
 app.get('/health', (req, res) => {

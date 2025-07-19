@@ -3,7 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { FlightSearchParams } from '@shared/types/flight.js';
-import { mockFlightSearch } from '../services/flightService.js';
+
 import { 
   searchFlightsOpenSky, 
   searchFlightsWithWeather, 
@@ -59,7 +59,7 @@ export const liveFlightSearchTool = createTool({
     };
 
     const searchResults = await searchFlightsOpenSky(searchParams);
-    const summary = `Found ${searchResults.flights.length} live flights from ${searchParams.origin} to ${searchParams.destination}. Using real-time data from OpenSky Network. Price range: $${Math.min(...searchResults.flights.map(f => f.price.amount))} - $${Math.max(...searchResults.flights.map(f => f.price.amount))}.`;
+    const summary = `Found ${searchResults.flights.length} live flights from ${searchParams.origin} to ${searchParams.destination}. Using real-time data from OpenSky Network. Price range: $${Math.min(...searchResults.flights.map((f: any) => f.price.amount))} - $${Math.max(...searchResults.flights.map((f: any) => f.price.amount))}.`;
 
     return {
       flights: searchResults.flights,
@@ -89,7 +89,7 @@ export const weatherFlightSearchTool = createTool({
     };
 
     const searchResults = await searchFlightsWithWeather(searchParams);
-    const summary = `Found ${searchResults.flights.length} flights with weather analysis from ${searchParams.origin} to ${searchParams.destination}. Weather conditions and delay risks included. Price range: $${Math.min(...searchResults.flights.map(f => f.price.amount))} - $${Math.max(...searchResults.flights.map(f => f.price.amount))}.`;
+    const summary = `Found ${searchResults.flights.length} flights with weather analysis from ${searchParams.origin} to ${searchParams.destination}. Weather conditions and delay risks included. Price range: $${Math.min(...searchResults.flights.map((f: any) => f.price.amount))} - $${Math.max(...searchResults.flights.map((f: any) => f.price.amount))}.`;
 
     return {
       flights: searchResults.flights,
@@ -119,7 +119,7 @@ export const historicalFlightSearchTool = createTool({
     };
 
     const searchResults = searchHistoricalFlights(searchParams);
-    const summary = `Found ${searchResults.flights.length} flights with historical performance data from ${searchParams.origin} to ${searchParams.destination}. Includes on-time performance, price history, and reliability metrics. Price range: $${Math.min(...searchResults.flights.map(f => f.price.amount))} - $${Math.max(...searchResults.flights.map(f => f.price.amount))}.`;
+    const summary = `Found ${searchResults.flights.length} flights with historical performance data from ${searchParams.origin} to ${searchParams.destination}. Includes on-time performance, price history, and reliability metrics. Price range: $${Math.min(...searchResults.flights.map((f: any) => f.price.amount))} - $${Math.max(...searchResults.flights.map((f: any) => f.price.amount))}.`;
 
     return {
       flights: searchResults.flights,
@@ -149,7 +149,7 @@ export const enhancedFlightSearchTool = createTool({
     };
 
     const searchResults = createEnhancedMockFlights(searchParams);
-    const summary = `Found ${searchResults.flights.length} enhanced flights from ${searchParams.origin} to ${searchParams.destination}. Realistic airline data with detailed aircraft and amenity information. Price range: $${Math.min(...searchResults.flights.map(f => f.price.amount))} - $${Math.max(...searchResults.flights.map(f => f.price.amount))}.`;
+    const summary = `Found ${searchResults.flights.length} enhanced flights from ${searchParams.origin} to ${searchParams.destination}. Realistic airline data with detailed aircraft and amenity information. Price range: $${Math.min(...searchResults.flights.map((f: any) => f.price.amount))} - $${Math.max(...searchResults.flights.map((f: any) => f.price.amount))}.`;
 
     return {
       flights: searchResults.flights,

@@ -73,3 +73,13 @@ export interface FlightSearchResponse {
   totalResults: number;
   searchParams: FlightSearchParams;
 }
+
+export interface FlightSearchResult {
+  flights: any[];
+  searchId: string;
+  totalResults: number;
+  searchParams: FlightSearchParams;
+  provider?: string;
+  timestamp?: string;
+  metadata?: any;
+}

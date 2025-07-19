@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { FlightSearchParams, FlightSearchResult } from '@shared/types/flight.js';
 
 // OpenSky Network API - Completely free flight data

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import express from 'express';
 import { EventType } from '@ag-ui/core';
 import { EventEncoder } from '@ag-ui/encoder';

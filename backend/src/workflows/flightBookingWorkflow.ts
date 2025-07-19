@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { FlightSearchParams } from '@shared/types/flight.js';

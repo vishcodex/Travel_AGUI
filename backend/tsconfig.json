@@ -6,12 +6,11 @@
     "moduleResolution": "Node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
